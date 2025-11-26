@@ -1,0 +1,43 @@
+{
+  "title": "Gradio 6 Migration Guide Context",
+  "source": "https://www.gradio.app/main/guides/gradio-6-migration-guide",
+  "key_changes": {
+    "breaking_changes": [
+      "gr.Interface() constructor changes",
+      "Component API updates",
+      "Event handling modifications",
+      "Theme system overhaul"
+    ],
+    "new_features": [
+      "Improved performance",
+      "Better TypeScript support",
+      "Enhanced component library",
+      "New layout options"
+    ],
+    "migration_steps": [
+      "Update gradio version: pip install gradio>=6.0",
+      "Review component usage",
+      "Update event handlers",
+      "Test interface functionality"
+    ]
+  },
+  "common_patterns": {
+    "interface_creation": {
+      "old": "gr.Interface(fn=predict, inputs='text', outputs='text')",
+      "new": "gr.Interface(fn=predict, inputs=gr.Textbox(), outputs=gr.Textbox())"
+    },
+    "component_updates": {
+      "textbox": "gr.Textbox() instead of 'text'",
+      "image": "gr.Image() instead of 'image'",
+      "audio": "gr.Audio() instead of 'audio'"
+    }
+  },
+  "your_app_impact": {
+    "current_usage": "gr.Interface with orchestrator function",
+    "potential_changes": [
+      "Update component definitions in create_interface()",
+      "Review event handling in UI components",
+      "Test launch parameters compatibility"
+    ]
+  }
+}
