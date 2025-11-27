@@ -3,6 +3,7 @@ from ..base import BaseMCPServer
 import os
 import httpx
 import logging
+from elevenlabs import ElevenLabs, VoiceSettings
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,10 @@ class ElevenLabsMCPServer(BaseMCPServer):
     def __init__(self):
         super().__init__("elevenlabs", "http://localhost:8005")
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
-        self.base_url = "https://api.elevenlabs.io/v1"
+        if self.api_key:
+            self.client = ElevenLabs(api_key=self.api_key)
+        else:
+            self.client = None
     
     async def health_check(self) -> Dict[str, str]:
         """Check ElevenLabs server health"""
