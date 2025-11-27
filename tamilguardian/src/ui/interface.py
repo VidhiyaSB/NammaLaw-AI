@@ -84,14 +84,7 @@ def create_interface(orchestrator: NammaLawOrchestrator) -> gr.Blocks:
             return f"An error occurred: {str(e)}", "", "", "", None
     
     # Create the interface
-    with gr.Blocks(
-        title="NammaLaw AI - Legal Assistant",
-        theme=gr.themes.Soft(),
-        css="""
-        .main-header { text-align: center; margin-bottom: 2rem; }
-        .disclaimer { background-color: #fff3cd; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; }
-        """
-    ) as interface:
+    with gr.Blocks() as interface:
         
         # Header
         gr.HTML("""

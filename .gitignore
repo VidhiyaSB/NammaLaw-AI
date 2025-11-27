@@ -41,6 +41,9 @@ logs/
 
 # Environment variables
 .env
+*.env
+.env.local
+.env.production
 
 # Gradio
 gradio_cached_examples/

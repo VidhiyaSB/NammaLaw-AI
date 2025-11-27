@@ -12,7 +12,15 @@ class LLMMCPServer(BaseMCPServer):
     
     def __init__(self):
         super().__init__("llm", "http://localhost:8002")
-        self.client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Use Nebius API with OpenAI-compatible client
+        nebius_api_key = os.getenv("NEBIUS_API_KEY")
+        if nebius_api_key:
+            self.client = openai.AsyncOpenAI(
+                api_key=nebius_api_key,
+                base_url="https://api.studio.nebius.ai/v1/"
+            )
+        else:
+            self.client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
     async def health_check(self) -> Dict[str, str]:
         """Check LLM server health"""
@@ -46,7 +54,7 @@ class LLMMCPServer(BaseMCPServer):
         # Build context string
         context_str = self._build_context_string(rag_results, web_results, parsed_docs)
         
-        system_prompt = """You are TamilGuardian, an AI legal assistant for Tamil Nadu residents. 
+        system_prompt = """You are NammaLaw AI, an AI legal assistant for Tamil Nadu residents. 
         Analyze the legal query using the provided context and generate a clear, factual summary.
         
         CRITICAL REQUIREMENTS:
@@ -68,7 +76,7 @@ class LLMMCPServer(BaseMCPServer):
         
         try:
             response = await self.client.chat.completions.create(
-                model="gpt-4",
+                model="meta-llama/Meta-Llama-3.1-8B-Instruct",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -129,7 +137,7 @@ class LLMMCPServer(BaseMCPServer):
         
         try:
             response = await self.client.chat.completions.create(
-                model="gpt-4",
+                model="meta-llama/Meta-Llama-3.1-8B-Instruct",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -173,7 +181,7 @@ class LLMMCPServer(BaseMCPServer):
         
         try:
             response = await self.client.chat.completions.create(
-                model="gpt-4",
+                model="meta-llama/Meta-Llama-3.1-8B-Instruct",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
