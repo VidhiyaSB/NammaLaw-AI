@@ -1,114 +1,132 @@
 from typing import Dict, Any, List
 from ..base import BaseMCPServer
-from .retriever import NebiusRAGRetriever
+import os
 import logging
+import glob
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 class RAGMCPServer(BaseMCPServer):
-    """MCP Server for RAG operations using Nebius"""
+    """MCP Server for Tamil Nadu legal document retrieval"""
     
     def __init__(self):
-        super().__init__("rag", "http://localhost:8001")  # In production, this would be a separate service
-        self.retriever = NebiusRAGRetriever()
-    
+        super().__init__("rag", "http://localhost:8001")
+        self.legal_docs_path = os.path.join(os.path.dirname(__file__), "../../..", "data", "legal_docs")
+        self.embeddings_path = os.path.join(os.path.dirname(__file__), "../../..", "data", "embeddings")
+        self._load_documents()
+        
     async def health_check(self) -> Dict[str, str]:
         """Check RAG server health"""
-        try:
-            # Test retriever connection
-            await self.retriever.health_check()
-            return {"status": "healthy", "service": "rag"}
-        except Exception as e:
-            return {"status": "unhealthy", "error": str(e)}
+        return {"status": "healthy", "service": "rag"}
     
     async def call_tool(self, tool_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle RAG tool calls"""
         
         if tool_name == "search":
             return await self._search(params)
-        elif tool_name == "index_document":
-            return await self._index_document(params)
+        elif tool_name == "retrieve":
+            return await self._retrieve(params)
+        elif tool_name == "list_documents":
+            return await self.list_documents()
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
     
+    def _load_documents(self):
+        """Load available legal documents"""
+        self.documents = []
+        if os.path.exists(self.legal_docs_path):
+            for file_path in glob.glob(os.path.join(self.legal_docs_path, "*.pdf")):
+                doc_name = Path(file_path).stem
+                self.documents.append({
+                    "id": doc_name,
+                    "title": doc_name.replace("_", " ").title(),
+                    "path": file_path,
+                    "type": "pdf"
+                })
+    
     async def _search(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Perform RAG search with Tamil Nadu jurisdiction boosting"""
-        query = params.get("query", "")
-        top_k = params.get("top_k", 10)
+        """Search Tamil Nadu legal documents"""
+        query = params.get("query", "").lower()
+        
+        if not query:
+            return {"success": False, "error": "No query provided"}
         
         try:
-            results = await self.retriever.search(
-                query=query,
-                top_k=top_k,
-                jurisdiction_boost={"tamil_nadu": 1.5, "india": 1.2}
-            )
+            # Simple keyword matching in document titles
+            results = []
+            for doc in self.documents:
+                title_lower = doc["title"].lower()
+                if any(keyword in title_lower for keyword in query.split()):
+                    results.append({
+                        "title": doc["title"],
+                        "content": f"Document: {doc['title']}",
+                        "source": doc["id"],
+                        "path": doc["path"],
+                        "relevance": 0.8
+                    })
             
-            # Calculate confidence based on scores
-            confidence = self._calculate_confidence(results)
+            # If no matches, return all documents
+            if not results:
+                results = [{
+                    "title": doc["title"],
+                    "content": f"Available document: {doc['title']}",
+                    "source": doc["id"],
+                    "path": doc["path"],
+                    "relevance": 0.5
+                } for doc in self.documents[:3]]  # Limit to 3
             
             return {
                 "success": True,
                 "results": results,
-                "confidence": confidence,
-                "sources": [self._format_citation(r) for r in results]
+                "query": query,
+                "source": "TN Legal Documents",
+                "total_docs": len(self.documents)
             }
             
         except Exception as e:
             logger.error(f"RAG search failed: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "confidence": 0.0
-            }
+            return {"success": False, "error": str(e)}
     
-    async def _index_document(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Index a new document"""
-        document = params.get("document", {})
+    async def _retrieve(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Retrieve specific legal document"""
+        doc_id = params.get("doc_id", "")
+        
+        if not doc_id:
+            return {"success": False, "error": "No document ID provided"}
         
         try:
-            doc_id = await self.retriever.index_document(document)
+            # Find document by ID
+            doc = next((d for d in self.documents if d["id"] == doc_id), None)
+            
+            if not doc:
+                return {"success": False, "error": f"Document {doc_id} not found"}
+            
+            document = {
+                "id": doc["id"],
+                "title": doc["title"],
+                "path": doc["path"],
+                "type": doc["type"],
+                "metadata": {
+                    "filename": os.path.basename(doc["path"]),
+                    "size": os.path.getsize(doc["path"]) if os.path.exists(doc["path"]) else 0
+                }
+            }
+            
             return {
                 "success": True,
-                "doc_id": doc_id
+                "document": document,
+                "source": "TN Legal Documents"
             }
+            
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            logger.error(f"RAG retrieve failed: {e}")
+            return {"success": False, "error": str(e)}
     
-    def _calculate_confidence(self, results: List[Dict]) -> float:
-        """Calculate overall confidence score"""
-        if not results:
-            return 0.0
-        
-        # Weight by jurisdiction and score
-        total_score = 0.0
-        total_weight = 0.0
-        
-        for result in results:
-            jurisdiction = result.get("jurisdiction", "unknown")
-            score = result.get("score", 0.0)
-            
-            # Jurisdiction weights
-            weight = 1.0
-            if jurisdiction == "tamil_nadu":
-                weight = 1.5
-            elif jurisdiction == "india":
-                weight = 1.2
-            
-            total_score += score * weight
-            total_weight += weight
-        
-        return min(total_score / total_weight if total_weight > 0 else 0.0, 1.0)
-    
-    def _format_citation(self, result: Dict) -> Dict[str, str]:
-        """Format search result as citation"""
+    async def list_documents(self) -> Dict[str, Any]:
+        """List all available legal documents"""
         return {
-            "doc_id": result.get("doc_id", ""),
-            "title": result.get("title", ""),
-            "source_type": result.get("source_type", "statute"),
-            "jurisdiction": result.get("jurisdiction", "unknown"),
-            "confidence": result.get("score", 0.0),
-            "excerpt": result.get("content", "")[:200] + "..."
+            "success": True,
+            "documents": self.documents,
+            "count": len(self.documents)
         }

@@ -1,3 +1,7 @@
+# Environment variables
+.env
+*.env
+
 # Python
 __pycache__/
 *.py[cod]
@@ -20,7 +24,7 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# Virtual environments
 venv/
 env/
 ENV/
@@ -31,23 +35,21 @@ ENV/
 *.swp
 *.swo
 
-# OS
-.DS_Store
-Thumbs.db
-
 # Logs
-*.log
 logs/
-
-# Environment variables
-.env
-*.env
-.env.*
-!.env.example
+*.log
 
 # Gradio
-gradio_cached_examples/
-flagged/
+.gradio/
 
-# Context files (optional - remove if you want to track them)
-context/gradio_6_raw.html
+# Database
+*.db
+*.sqlite
+
+# Temporary files
+*.tmp
+*.temp
+
+# API Keys (extra protection)
+*api_key*
+*API_KEY*

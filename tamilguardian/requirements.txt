@@ -7,3 +7,15 @@ python-docx
 openai
 requests
 elevenlabs
+httpx
+
+# MCP Core
+mcp>=1.12.0
+
+# Official MCP Servers
+perplexity-mcp-server
+mcp-server-sqlite
+elevenlabs-mcp
+
+# Node.js packages (install with npm/npx)
+# @modelcontextprotocol/server-filesystem

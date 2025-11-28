@@ -33,28 +33,27 @@ class BaseMCPServer(ABC):
             raise
 
 class MCPServerManager:
-    """Manages connections to all MCP servers"""
+    """Manages connections to official MCP servers"""
     
     def __init__(self):
         self.servers: Dict[str, BaseMCPServer] = {}
         self._initialize_servers()
     
     def _initialize_servers(self):
-        """Initialize all MCP server connections"""
+        """Initialize MCP server connections"""
+        from .official_mcp import mcp_client, setup_official_servers
         from .rag.server import RAGMCPServer
-        from .websearch.server import WebSearchMCPServer
-        from .parser.server import ParserMCPServer
-        from .llm.server import LLMMCPServer
-        from .elevenlabs.server import ElevenLabsMCPServer
         
-        # Initialize servers (in production, these would be separate services)
+        # Primary: Custom RAG for TN legal data
         self.servers = {
             "rag": RAGMCPServer(),
-            "websearch": WebSearchMCPServer(),
-            "parser": ParserMCPServer(),
-            "llm": LLMMCPServer(),
-            "elevenlabs": ElevenLabsMCPServer()
         }
+        
+        # Official MCP client (fallback)
+        self.mcp_client = mcp_client
+        
+        # Setup official servers
+        asyncio.create_task(setup_official_servers())
     
     async def call_server(self, server_name: str, tool_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Call a tool on a specific server"""
@@ -75,3 +74,11 @@ class MCPServerManager:
                 results[name] = f"error: {str(e)}"
         
         return results
+    
+    async def call_mcp_tool(self, server: str, tool: str, params: dict) -> dict:
+        """Call official MCP tool"""
+        return await self.mcp_client.call_tool(server, tool, params)
+    
+    async def list_mcp_tools(self, server: str) -> dict:
+        """List tools for MCP server"""
+        return await self.mcp_client.list_tools(server)
